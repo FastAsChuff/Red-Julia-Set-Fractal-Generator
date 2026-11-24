@@ -7,7 +7,7 @@
 #include <time.h>
 #include <unistd.h>
 
-// gcc redjulia.c -o redjulia.bin -O3 -Wall -march=native
+// gcc redjulia.c -o redjulia.bin -O3 -Wall -march=native -fopenmp
 
 typedef struct {
   uint64_t pixels_bytes;
@@ -89,13 +89,14 @@ uint32_t julia_iterations(double creal, double cimag, double preal, double pimag
 }
 
 void RGB_BMP2julia(double creal, double cimag, double xstart, double xend, double ystart, BMP2image_t *image) {  
-  double oob, preal, pimag, yend = ystart + image->height*(xend - xstart)/image->width;
-  uint64_t x, y;
-  uint32_t iterations;
-  uint8_t red, green, blue;
+  double oob, yend = ystart + image->height*(xend - xstart)/image->width;
   oob = 30;
-  for (y = 0; y < image->height; y++) {
-    for (x = 0; x < image->width; x++) {
+  #pragma omp parallel for
+  for (uint64_t y = 0; y < image->height; y++) {
+    uint32_t iterations;
+    uint8_t red, green, blue;
+    double preal, pimag;
+    for (uint64_t x = 0; x < image->width; x++) {
       preal = xstart + (xend - xstart)*x/(image->width - 1);
       pimag = ystart + (yend - ystart)*y/(image->height - 1);
       iterations = julia_iterations(creal, cimag, preal, pimag, oob);
